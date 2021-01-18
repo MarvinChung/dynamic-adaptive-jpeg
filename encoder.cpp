@@ -139,15 +139,15 @@ public:
 			for(int j = 0; j < width; j++)
 			{
 				// change from doubel to int 
-				int Y = smartPtr3D[i][j][0];
-				int Cb = smartPtr3D[i][j][1];
-				int Cr = smartPtr3D[i][j][2];
+				double Y = smartPtr3D[i][j][0];
+				double Cb = smartPtr3D[i][j][1];
+				double Cr = smartPtr3D[i][j][2];
 
-				Cr = Cr - 128 ;
-				Cb = Cb - 128 ;
-				int r = Y + ( Cr >> 2 + Cr >> 3 + Cr >> 5 ) ;
-				int g = Y - ( Cb >> 2 + Cb >> 4 + Cb >> 5) - ( Cr >> 1 + Cr >> 3 + Cr >> 4 + Cr >> 5) ;
-				int b = Y + ( Cb + Cb >> 1 + Cb >> 2 + Cb >> 6) ;
+
+				int r = (int) (Y + 1.40200 * (Cr - 0x80));
+				int g = (int) (Y - 0.34414 * (Cb - 0x80) - 0.71414 * (Cr - 0x80));
+				int b = (int) (Y + 1.77200 * (Cb - 0x80));
+
 				RGB_Image(i,j,0) = r;
 				RGB_Image(i,j,1) = g;
 				RGB_Image(i,j,2) = b;
