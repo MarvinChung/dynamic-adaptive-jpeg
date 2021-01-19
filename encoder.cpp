@@ -357,6 +357,43 @@ public:
 	        }
 	}
 
+	template<class T>
+	void adaptive_merge(int channel, const Image<T>& img){
+		// Should divisible by 8. (Padding first)
+		assert(img.width % 8 == 0);
+		assert(img.height % 8 == 0);
+		TwoDArray<char> merge_blk(img.width, img.height);
+		/*
+			merge_blk: 
+				00 -> 8x8 blocks
+				01 -> 16x16 blocks
+				10 -> 32x32 blocks
+				11 -> 64x64 blocks
+				100 -> merged
+			Initial: zeros
+		*/
+		for(int i=0; i<img.height; i+=8){
+			for(int j=0; j<img.width; j+=8){
+				for(int size=3; size>0; size--){
+					int blk_size = 8 << size;
+					// out of range -> continue
+					if(i + blk_size > img.height || j + blk_size > img.width)
+						continue;
+					TwoDArray<double> merge_DCT_block(8, 8);
+					dct_2d(0, merge_DCT_block, img, 0, 0, 8);
+					merge_DCT_block.show();
+					exit(0);
+					// for(int x=0; x<merge_DCT_block.height; x++){
+					// 	for(int y=0; x<merge_DCT_block.width; y++){
+					// 		 merge_DCT_block[x][y];
+					// 		printf("%.2f ", merge_DCT_block[x][y]);
+					// 	}puts("");
+					// }
+				}
+			}
+		}
+		exit(0);
+	}
 
 	template<class T>
 	void DCT(const Image<T>& img, std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
@@ -370,6 +407,7 @@ public:
 		for(int channel = 0; channel < 3; channel++)
 		{
 			std::cout << "start channel: " << channel << std::endl;
+			adaptive_merge(channel, img);
 			// first don't consider sampling rate
 			// We can only use Y (index 0) then become grayscale image 
 			for(int i = 0; i < img.height/8; i++)
