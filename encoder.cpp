@@ -41,7 +41,10 @@ public:
 		{
 			for (int j = 0; j < width ; j++)
 			{
-				printf("%d ",smartPtr2D[i][j]);
+				if (typeid(T).name() == typeid(unsigned char).name())
+					std::cout << int(smartPtr2D[i][j]) << " ";
+				else
+					std::cout << std::fixed << smartPtr2D[i][j] << " ";
 			}
 			std::cout << std::endl;
 		}
@@ -91,7 +94,10 @@ public:
 			for (int j = 0; j < width ; j++)
 			{
 				for(int k = 0; k < 3; k++)
-					printf("%d ",smartPtr3D[i][j][k]);
+					if (typeid(T).name() == typeid(unsigned char).name())
+						std::cout << int(smartPtr3D[i][j][k]) << " ";
+					else
+						std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 				std::cout << std::endl;
 			}
 		}
@@ -99,13 +105,19 @@ public:
 	void printXY(int i , int j)
 	{
 		for(int k = 0; k < 3; k++)
-			printf("%d ",smartPtr3D[i][j][k]);
+			if (typeid(T).name() == typeid(unsigned char).name())
+				std::cout << int(smartPtr3D[i][j][k]) << " ";
+			else
+				std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 		std::cout << std::endl;
 	}
 
 	void printXYZ(int i , int j, int k)
 	{
-		printf("%d\n",smartPtr3D[i][j][k]);
+		if (typeid(T).name() == typeid(unsigned char).name())
+			std::cout << int(smartPtr3D[i][j][k]) << " ";
+		else
+			std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 	}
 
 	Image<double> RGB2YCbCr()
@@ -158,6 +170,7 @@ public:
 	}
 
 };
+
 
 class PPM_Image_Reader{
 public:
