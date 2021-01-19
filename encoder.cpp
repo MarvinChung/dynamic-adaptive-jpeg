@@ -282,25 +282,25 @@ public:
 		auto out = std::make_unique<double[]>(block_size);
 		TwoDArray<double> rows(block_size, block_size);
 		/* transform rows */
-		for (j=0; j<8; j++)
+		for (j=0; j<block_size; j++)
 		{
-			for (i=0; i<8; i++){
+			for (i=0; i<block_size; i++){
 				if(row_idx+i<img.height && col_idx+j<img.width)
 					in[i] = img(row_idx+i, col_idx+j, channel);
 				else
 					in[i] = 0;
 			}
-			dct_1d(in.get(), out.get(), 8);
-			for (i=0; i<8; i++) rows(j,i) = out[i];
+			dct_1d(in.get(), out.get(), block_size);
+			for (i=0; i<block_size; i++) rows(j,i) = out[i];
 		}
 
 		/* transform columns */
-		for (j=0; j<8; j++)
+		for (j=0; j<block_size; j++)
 		{
-			for (i=0; i<8; i++)
+			for (i=0; i<block_size; i++)
 				in[i] = rows(i,j);
-			dct_1d(in.get(), out.get(), 8);
-			for (i=0; i<8; i++) DCT_Block(i,j) = out[i];
+			dct_1d(in.get(), out.get(), block_size);
+			for (i=0; i<block_size; i++) DCT_Block(i,j) = out[i];
 		}
 	}
 
