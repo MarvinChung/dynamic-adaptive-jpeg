@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <assert.h>
+#define MERGE_THERSHOLD 200
 template <class T>
 class TwoDArray
 {
@@ -380,31 +381,32 @@ public:
 	}
 
 	template<class T>
-	static std::vector<double> left_up_corner(const TwoDArray<T>& blk){
+	static std::vector<double> left_up_corner(const TwoDArray<T>& blk, double divide_factor){
 		// we only fetch first 16 items.
 		std::vector<T> v;
 		for(int i=0; i<4; i++){
 			for(int j=0; j<4; j++){
-				v.push_back(blk(i,j));
+				v.push_back(blk(i,j) / divide_factor);
 			}
 		}
 		return v;
 	}
 	template<class T>
-	void adaptive_merge(int channel, const Image<T>& img){
+	void adaptive_merge(const Image<T>& img, std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[]){
 		// Should divisible by 8. (Padding first)
 		assert(img.width % 8 == 0);
 		assert(img.height % 8 == 0);
-		TwoDArray<char> merge_blk(img.width, img.height);
+		TwoDArray<char> merge_blk(img.width/8, img.height/8);
 		/*
 			merge_blk: 
-				00 -> 8x8 blocks
-				01 -> 16x16 blocks
-				10 -> 32x32 blocks
-				11 -> 64x64 blocks
-				100 -> merged
+				0 -> 8x8 blocks
+				1 -> 16x16 blocks
+				2 -> 32x32 blocks
+				3 -> 64x64 blocks
+				4 -> merged
 			Initial: zeros
 		*/
+		int cul_size[4] = {0};
 		for(int i=0; i<img.height; i+=8){
 			for(int j=0; j<img.width; j+=8){
 				for(int size=3; size>0; size--){
@@ -412,20 +414,71 @@ public:
 					// out of range -> continue
 					if(i + blk_size > img.height || j + blk_size > img.width)
 						continue;
-					TwoDArray<double> merge_DCT_block(8, 8);
-					dct_2d(0, merge_DCT_block, img, 0, 0, 8);
-					merge_DCT_block.show();
-					exit(0);
-					// for(int x=0; x<merge_DCT_block.height; x++){
-					// 	for(int y=0; x<merge_DCT_block.width; y++){
-					// 		 merge_DCT_block[x][y];
-					// 		printf("%.2f ", merge_DCT_block[x][y]);
-					// 	}puts("");
-					// }
+					// merge the block that merged -> continue
+					bool ok_to_merge = true;
+					for(int ii=i/8; ii<i/8 + (1<<size) && ok_to_merge; ii++){
+						for(int jj=j/8; jj<j/8 + (1<<size) && ok_to_merge; jj++){
+							if(merge_blk(ii,jj) != 0){
+								ok_to_merge = false;
+							}
+						}	
+					}
+					if(!ok_to_merge)
+						continue;
+
+					// Calc DCT after merging
+					TwoDArray<double> merge_DCT_block(blk_size, blk_size);
+					dct_2d(0, merge_DCT_block, img, i, j, blk_size);
+					std::vector<double> merge_DCT_info = left_up_corner(merge_DCT_block, (1 << (2*size)));
+					double distance = 0;
+					for(int ii=i; ii<i+blk_size; ii+=8){
+						for(int jj=j; jj<j+blk_size; jj+=8){
+							// Calc DCT before merging, and calc the L1 distance.
+							TwoDArray<double> single_DCT_block(8, 8);
+							dct_2d(0, single_DCT_block, img, ii, jj, 8);
+							std::vector<double> single_DCT_info = left_up_corner(single_DCT_block, 1);
+							distance += one_norm_distance(merge_DCT_info, single_DCT_info);
+						}
+					}
+					// sum distance -> mean distance
+					distance /= (1 << (2*size));
+					if(distance < MERGE_THERSHOLD){
+						// this block merged.
+						for(int ii=i/8; ii<i/8 + (1<<size); ii++){
+							for(int jj=j/8; jj<j/8 + (1<<size); jj++){
+								// 4: MERGED
+								merge_blk(ii,jj) = 4;
+							}	
+						}
+						merge_blk(i/8,j/8) = size;
+					}
 				}
+				if(merge_blk(i/8,j/8) != 4)
+					cul_size[merge_blk(i/8,j/8)] ++;
+				printf("8: %d\t 16:%d\t 32:%d\t64:%d\t completeness:( %.2f / 100%%) \r", 
+					cul_size[0], cul_size[1], cul_size[2], cul_size[3],
+					100 * (double)(cul_size[0] + cul_size[1] * 4 + cul_size[2] * 16 + cul_size[3] * 64) / (img.width * img.height / 64));
 			}
 		}
-		exit(0);
+		puts("Merge Finished");
+		// FILE: for visualize
+		// FILE *fout = fopen("merge.txt", "w");
+		for(int channel=0; channel<3; channel++){
+			for(int i=0; i<img.height/8; i++){
+				for(int j=0; j<img.width/8; j++){
+					// fprintf(fout, "%d", merge_blk(i,j));
+					if( merge_blk(i,j) != 4){
+						int blk_size = 8 << merge_blk(i,j);
+						TwoDArray<double> DCT_Block(blk_size, blk_size);
+						dct_2d(channel, DCT_Block, img, i*8, j*8, blk_size);
+						DCT_channel_Blocks[channel].push_back(std::make_tuple(blk_size, i, j, std::move(DCT_Block)));
+						// DCT_channel_Blocks[channel].push_back(std::make_tuple(8, i, j, std::move(DCT_Block)));
+					
+					}
+				}
+				// fprintf(fout, "\n");
+			}
+		}	
 	}
 
 	template<class T>
@@ -440,7 +493,6 @@ public:
 		for(int channel = 0; channel < 3; channel++)
 		{
 			std::cout << "start channel: " << channel << std::endl;
-			adaptive_merge(channel, img);
 			// first don't consider sampling rate
 			// We can only use Y (index 0) then become grayscale image 
 			for(int i = 0; i < img.height/8; i++)
@@ -467,7 +519,8 @@ public:
 
 		// tuple (block size, row_idx, col_idx, DCT_Block)
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
-		DCT(YCbCr_Image, DCT_channel_Blocks);
+		// DCT(YCbCr_Image, DCT_channel_Blocks);
+		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
 
 	}
 
