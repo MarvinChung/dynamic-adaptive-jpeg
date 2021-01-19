@@ -41,7 +41,7 @@ public:
 		{
 			for (int j = 0; j < width ; j++)
 			{
-				printf("%d ",smartPtr2D[i][j]);
+				printf("%.2lf ",smartPtr2D[i][j]);
 			}
 			std::cout << std::endl;
 		}
@@ -356,13 +356,32 @@ public:
 	            ofs << int(debug_RGB_img(i,j,0)) << " " << int(debug_RGB_img(i,j,1)) << " " << int(debug_RGB_img(i,j,2)) << "\n";
 	        }
 	}
+	static double one_norm_distance(const std::vector<double> &A, const std::vector<double>& B){
+		assert(A.size() == B.size());
+		double sum = 0;
+		for(int i=0; i<A.size(); i++){
+			sum += abs(A[i] - B[i]);
+		}
+		return sum;
+	}
 
+	template<class T>
+	static std::vector<double> left_up_corner(const TwoDArray<T>& blk){
+		// we only fetch first 16 items.
+		std::vector<T> v;
+		for(int i=0; i<4; i++){
+			for(int j=0; j<4; j++){
+				v.push_back(blk(i,j));
+			}
+		}
+		return v;
+	}
 	template<class T>
 	void adaptive_merge(int channel, const Image<T>& img){
 		// Should divisible by 8. (Padding first)
 		assert(img.width % 8 == 0);
 		assert(img.height % 8 == 0);
-		TwoDArray<char> merge_blk(img.width, img.height);
+		TwoDArray<unsigned char> merge_blk(img.width, img.height);
 		/*
 			merge_blk: 
 				00 -> 8x8 blocks
@@ -379,9 +398,14 @@ public:
 					// out of range -> continue
 					if(i + blk_size > img.height || j + blk_size > img.width)
 						continue;
-					TwoDArray<double> merge_DCT_block(8, 8);
-					dct_2d(0, merge_DCT_block, img, 0, 0, 8);
-					merge_DCT_block.show();
+					TwoDArray<double> merge_DCT_block(blk_size, blk_size);
+					dct_2d(0, merge_DCT_block, img, i, j, blk_size);
+					std::vector<double> merge_DCT_info = left_up_corner(merge_DCT_block);
+					for(auto d: merge_DCT_info){
+						printf("%.2lf ", d);
+					}
+					// printf("%d", merge_DCT_info.size());
+					// merge_DCT_block.show();
 					exit(0);
 					// for(int x=0; x<merge_DCT_block.height; x++){
 					// 	for(int y=0; x<merge_DCT_block.width; y++){
