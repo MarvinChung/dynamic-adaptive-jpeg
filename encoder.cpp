@@ -41,7 +41,10 @@ public:
 		{
 			for (int j = 0; j < width ; j++)
 			{
-				printf("%.2lf ",smartPtr2D[i][j]);
+				if (typeid(T).name() == typeid(unsigned char).name())
+					std::cout << int(smartPtr2D[i][j]) << " ";
+				else
+					std::cout << std::fixed << smartPtr2D[i][j] << " ";
 			}
 			std::cout << std::endl;
 		}
@@ -91,7 +94,10 @@ public:
 			for (int j = 0; j < width ; j++)
 			{
 				for(int k = 0; k < 3; k++)
-					printf("%d ",smartPtr3D[i][j][k]);
+					if (typeid(T).name() == typeid(unsigned char).name())
+						std::cout << int(smartPtr3D[i][j][k]) << " ";
+					else
+						std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 				std::cout << std::endl;
 			}
 		}
@@ -99,13 +105,19 @@ public:
 	void printXY(int i , int j)
 	{
 		for(int k = 0; k < 3; k++)
-			printf("%d ",smartPtr3D[i][j][k]);
+			if (typeid(T).name() == typeid(unsigned char).name())
+				std::cout << int(smartPtr3D[i][j][k]) << " ";
+			else
+				std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 		std::cout << std::endl;
 	}
 
 	void printXYZ(int i , int j, int k)
 	{
-		printf("%d\n",smartPtr3D[i][j][k]);
+		if (typeid(T).name() == typeid(unsigned char).name())
+			std::cout << int(smartPtr3D[i][j][k]) << " ";
+		else
+			std::cout << std::fixed << smartPtr3D[i][j][k] << " ";
 	}
 
 	Image<double> RGB2YCbCr()
@@ -158,6 +170,7 @@ public:
 	}
 
 };
+
 
 class PPM_Image_Reader{
 public:
@@ -269,25 +282,25 @@ public:
 		auto out = std::make_unique<double[]>(block_size);
 		TwoDArray<double> rows(block_size, block_size);
 		/* transform rows */
-		for (j=0; j<8; j++)
+		for (j=0; j<block_size; j++)
 		{
-			for (i=0; i<8; i++){
+			for (i=0; i<block_size; i++){
 				if(row_idx+i<img.height && col_idx+j<img.width)
 					in[i] = img(row_idx+i, col_idx+j, channel);
 				else
 					in[i] = 0;
 			}
-			dct_1d(in.get(), out.get(), 8);
-			for (i=0; i<8; i++) rows(j,i) = out[i];
+			dct_1d(in.get(), out.get(), block_size);
+			for (i=0; i<block_size; i++) rows(j,i) = out[i];
 		}
 
 		/* transform columns */
-		for (j=0; j<8; j++)
+		for (j=0; j<block_size; j++)
 		{
-			for (i=0; i<8; i++)
+			for (i=0; i<block_size; i++)
 				in[i] = rows(i,j);
-			dct_1d(in.get(), out.get(), 8);
-			for (i=0; i<8; i++) DCT_Block(i,j) = out[i];
+			dct_1d(in.get(), out.get(), block_size);
+			for (i=0; i<block_size; i++) DCT_Block(i,j) = out[i];
 		}
 	}
 
@@ -356,6 +369,7 @@ public:
 	            ofs << int(debug_RGB_img(i,j,0)) << " " << int(debug_RGB_img(i,j,1)) << " " << int(debug_RGB_img(i,j,2)) << "\n";
 	        }
 	}
+
 	static double one_norm_distance(const std::vector<double> &A, const std::vector<double>& B){
 		assert(A.size() == B.size());
 		double sum = 0;
@@ -381,7 +395,7 @@ public:
 		// Should divisible by 8. (Padding first)
 		assert(img.width % 8 == 0);
 		assert(img.height % 8 == 0);
-		TwoDArray<unsigned char> merge_blk(img.width, img.height);
+		TwoDArray<char> merge_blk(img.width, img.height);
 		/*
 			merge_blk: 
 				00 -> 8x8 blocks
@@ -398,14 +412,9 @@ public:
 					// out of range -> continue
 					if(i + blk_size > img.height || j + blk_size > img.width)
 						continue;
-					TwoDArray<double> merge_DCT_block(blk_size, blk_size);
-					dct_2d(0, merge_DCT_block, img, i, j, blk_size);
-					std::vector<double> merge_DCT_info = left_up_corner(merge_DCT_block);
-					for(auto d: merge_DCT_info){
-						printf("%.2lf ", d);
-					}
-					// printf("%d", merge_DCT_info.size());
-					// merge_DCT_block.show();
+					TwoDArray<double> merge_DCT_block(8, 8);
+					dct_2d(0, merge_DCT_block, img, 0, 0, 8);
+					merge_DCT_block.show();
 					exit(0);
 					// for(int x=0; x<merge_DCT_block.height; x++){
 					// 	for(int y=0; x<merge_DCT_block.width; y++){
