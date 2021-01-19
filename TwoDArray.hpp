@@ -36,6 +36,34 @@ public:
 	    return smartPtr2D[i][j];
 	}
 
+// 	inline TwoDArray<T>& operator/=(const TwoDArray<T>& arr)
+//     {
+//     	assert(this->width == arr.width);
+//     	assert(this->height == arr.height);
+
+//         for(int i = 0; i < height; i++)
+//         	for(int j = 0; j < width; j++)
+//         	{
+//         		smartPtr2D[i][j] /= arr[i][j];
+//         	}
+
+//         return *this;
+//     }
+
+// 	TwoDArray<T>& operator*=(const TwoDArray<T>& arr)
+//     {
+//     	assert(this->width == arr.width);
+//     	assert(this->height == arr.height);
+
+//         for(int i = 0; i < height; i++)
+//         	for(int j = 0; j < width; j++)
+//         	{
+//         		smartPtr2D[i][j] *= arr[i][j];
+//         	}
+
+//         return *this;
+//     }
+
 	void show()
 	{
 		for(int i = 0; i < height; i++)
@@ -50,4 +78,6 @@ public:
 			std::cout << std::endl;
 		}
 	}
+
+
 };

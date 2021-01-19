@@ -40,7 +40,6 @@ public:
 
     QuantizationTable() 
     {
-	puts("123");
         TwoDArray<unsigned int> c(8, 8);
         TwoDArray<unsigned int> l(8, 8);
         for (int i = 0; i < 8; i++)
@@ -49,16 +48,13 @@ public:
                 l(i, j) = luminance_quantization_table[i][j];
             }
 
-	puts("4");
         DQT[0].push_back(std::move(l));
         DQT[0].push_back(std::move(c));
-	puts("456");
         
         // create larger quantization table
         for (int s = 16, j = 0; s <= 64; s*=2, j++) {
             TwoDArray<unsigned int> l_temp(s,s);
             TwoDArray<unsigned int> c_temp(s,s);
-		printf("j: %d\n", j);
             UpSampling(DQT[j][0], l_temp, s);
             UpSampling(DQT[j][1], c_temp, s);
             DQT[j+1].push_back(std::move(l_temp));

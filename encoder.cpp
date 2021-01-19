@@ -1,82 +1,5 @@
 #include "table.hpp"
 #define MERGE_THERSHOLD 200
-template <class T>
-class TwoDArray
-{
-public:
-	std::unique_ptr<std::unique_ptr<T[]>[]>     smartPtr2D;
-	std::unique_ptr<T[]>                        smartPtr1D;
-	int width;
-	int height;	
-	TwoDArray() {}
-	TwoDArray(int width, int height): width(width), height(height) 
-	{
-		
-		smartPtr2D = std::make_unique<std::unique_ptr<T[]>[]>(height);
-		for (int i = 0; i < height; i++)
-		{
-			smartPtr1D = std::make_unique<T[]>(width);
-			for(int j = 0; j < width; j++)
-				smartPtr1D[j] = 0;
-		    smartPtr2D[i] = std::move(smartPtr1D);
-		}
-	}
-	T& operator()(int i, int j)
-	{
-		return smartPtr2D[i][j];
-	}
-	const T& operator () (int i, int j) const
-	{
-	    return smartPtr2D[i][j];
-	}
-
-	template <class T2>
-	T& operator/=(const TwoDArray<T2>& arr)
-    {
-    	assert(this->width == arr.width);
-    	assert(this->height == arr.height);
-
-        for(int i = 0; i < height; i++)
-        	for(int j = 0; j < width; j++)
-        	{
-        		smartPtr2D[i][j] /= arr[i][j];
-        	}
-
-        return *this;
-    }
-
-    template <class T2>
-	T& operator/=(const TwoDArray<T2>& arr)
-    {
-    	assert(this->width == arr.width);
-    	assert(this->height == arr.height);
-
-        for(int i = 0; i < height; i++)
-        	for(int j = 0; j < width; j++)
-        	{
-        		smartPtr2D[i][j] *= arr[i][j];
-        	}
-
-        return *this;
-    }
-
-	void show()
-	{
-		for(int i = 0; i < height; i++)
-		{
-			for (int j = 0; j < width ; j++)
-			{
-				if (typeid(T).name() == typeid(unsigned char).name())
-					std::cout << int(smartPtr2D[i][j]) << " ";
-				else
-					std::cout << std::fixed << smartPtr2D[i][j] << " ";
-			}
-			std::cout << std::endl;
-		}
-	}
-
-
-};
 
 template <class T>
 class Image
@@ -256,6 +179,7 @@ class JPGEncoder{
 public:
 	PPM_Image_Reader m_image_reader;
 	double cos_lookup[8][8];
+    QuantizationTable m_q_table;
 
 	JPGEncoder(PPM_Image_Reader& image_reader) 
 	{
@@ -539,24 +463,115 @@ public:
 
 	void Quantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
 	{
-		for(int i = 0; i < 3; i++)
-		{
-			if( DCT_channel_Blocks[i].width==table[i].width && DCT_channel_Blocks[i].height==table[i].height)
-				DCT_channel_Blocks[i] /= table[i]; 
-			else
-				assert(i<2);
-		}
+        puts("Quantize");
+        // Y:0 Cb:1 Cr:2
+        // Table[0]: Y, Table[1]:Cb,Cr
+        int flag = 0;
+        for (int i = 0; i < DCT_channel_Blocks[0].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[0].size(); j++)
+            {
+                printf("Q:%d\n",i);
+                if( std::get<3>(DCT_channel_Blocks[0][i]).width == m_q_table.DQT[0][j].width && std::get<3>(DCT_channel_Blocks[0][i]).height == m_q_table.DQT[0][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[0][i])(w,j) /= m_q_table.DQT[0][j](w,j); 
+                }
+           }
+        
+        for (int i = 0; i < DCT_channel_Blocks[1].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[1].size(); j++)
+            {
+                if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[1][j].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[1][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[1][i])(w,j) /= m_q_table.DQT[1][j](w,j); 
+                }
+           }
+        
+        for (int i = 0; i < DCT_channel_Blocks[1].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[2].size(); j++)
+            {
+                if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[2][j].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[2][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[1][i])(w,j) /= m_q_table.DQT[2][j](w,j); 
+                }
+           }
+        
+
 	}
 
-	void invQuantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+	void inv_Quantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
 	{
-		for(int i = 0; i < 3; i++)
-		{
-			if( DCT_channel_Blocks[i].width==table[i].width && DCT_channel_Blocks[i].height==table[i].height)
-				DCT_channel_Blocks[i] *= table[i]; 
-			else
-				assert(i<2);
-		}
+        // Y:0 Cb:1 Cr:2
+        // Table[0]: Y, Table[1]:Cb,Cr
+        puts("inv Quantize");
+        int flag = 0;
+        for (int i = 0; i < DCT_channel_Blocks[0].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[0].size(); j++)
+            {
+                printf("inv Q:%d\n",i);
+                if( std::get<3>(DCT_channel_Blocks[0][i]).width == m_q_table.DQT[0][j].width && std::get<3>(DCT_channel_Blocks[0][i]).height == m_q_table.DQT[0][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[0][i])(w,j) *= m_q_table.DQT[0][j](w,j); 
+                }
+           }
+        
+        for (int i = 0; i < DCT_channel_Blocks[1].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[1].size(); j++)
+            {
+                if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[1][j].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[1][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[1][i])(w,j) *= m_q_table.DQT[1][j](w,j); 
+                }
+           }
+        
+        for (int i = 0; i < DCT_channel_Blocks[1].size(); i++)
+            for (int j = 0; j < m_q_table.DQT[2].size(); j++)
+            {
+                if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[2][j].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[2][j].height)
+                {
+                    flag = 1;
+                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+                            std::get<3>(DCT_channel_Blocks[1][i])(w,j) *= m_q_table.DQT[2][j](w,j); 
+                }
+           }
+        
+        // debug check
+        
+        Image<double> debug_img(m_image_reader.m_image.width, m_image_reader.m_image.height);
+        for ( int channel = 0; channel < 3; channel++)
+        {
+            for (int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
+            {
+                int block_size = std::get<0>(DCT_channel_Blocks[channel][i]);
+                TwoDArray<double> DCT_Block(block_size, block_size);
+                int row_idx = std::get<1>(DCT_channel_Blocks[channel][i]);
+                int col_idx = std::get<2>(DCT_channel_Blocks[channel][i]);
+                for(int h = 0; h < block_size; h++)
+                    for(int w = 0; w < block_size; w++){
+                        TwoDArray<double> DCT_Block(block_size, block_size);
+                        int aa = std::get<1>(DCT_channel_Blocks[channel][i]) + h;
+                        int bb = std::get<2>(DCT_channel_Blocks[channel][i]) + w;
+                        DCT_Block(aa,bb) = std::get<3>(DCT_channel_Blocks[channel][i])(aa,bb); 
+                    }
+                idct(channel, DCT_Block, debug_img, row_idx, col_idx, block_size);
+            }
+        }
+        DEBUG_DRAW(debug_img);
 	}
 
 	void run()
@@ -568,7 +583,11 @@ public:
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
 		// DCT(YCbCr_Image, DCT_channel_Blocks);
 		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
-
+//         std::get<3>(DCT_channel_Blocks[0][0]).show();
+        Quantize(DCT_channel_Blocks);
+        inv_Quantize(DCT_channel_Blocks);
+//         std::get<3>(DCT_channel_Blocks[0][0]).show();
+        
 	}
 
 };
