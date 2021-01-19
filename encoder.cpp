@@ -1,10 +1,4 @@
-#include <iostream>
-#include <fstream>
-#include <memory>
-#include <vector>
-#include <sstream>
-#include <cmath>
-#include <assert.h>
+#include "table.hpp"
 #define MERGE_THERSHOLD 200
 template <class T>
 class TwoDArray
@@ -36,6 +30,36 @@ public:
 	    return smartPtr2D[i][j];
 	}
 
+	template <class T2>
+	T& operator/=(const TwoDArray<T2>& arr)
+    {
+    	assert(this->width == arr.width);
+    	assert(this->height == arr.height);
+
+        for(int i = 0; i < height; i++)
+        	for(int j = 0; j < width; j++)
+        	{
+        		smartPtr2D[i][j] /= arr[i][j];
+        	}
+
+        return *this;
+    }
+
+    template <class T2>
+	T& operator/=(const TwoDArray<T2>& arr)
+    {
+    	assert(this->width == arr.width);
+    	assert(this->height == arr.height);
+
+        for(int i = 0; i < height; i++)
+        	for(int j = 0; j < width; j++)
+        	{
+        		smartPtr2D[i][j] *= arr[i][j];
+        	}
+
+        return *this;
+    }
+
 	void show()
 	{
 		for(int i = 0; i < height; i++)
@@ -50,6 +74,8 @@ public:
 			std::cout << std::endl;
 		}
 	}
+
+
 };
 
 template <class T>
@@ -511,6 +537,27 @@ public:
 
 	}
 
+	void Quantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+	{
+		for(int i = 0; i < 3; i++)
+		{
+			if( DCT_channel_Blocks[i].width==table[i].width && DCT_channel_Blocks[i].height==table[i].height)
+				DCT_channel_Blocks[i] /= table[i]; 
+			else
+				assert(i<2);
+		}
+	}
+
+	void invQuantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+	{
+		for(int i = 0; i < 3; i++)
+		{
+			if( DCT_channel_Blocks[i].width==table[i].width && DCT_channel_Blocks[i].height==table[i].height)
+				DCT_channel_Blocks[i] *= table[i]; 
+			else
+				assert(i<2);
+		}
+	}
 
 	void run()
 	{
