@@ -38,14 +38,30 @@ public:
         }
     }
 
-    QuantizationTable() 
+    QuantizationTable() : QuantizationTable(80) {}
+
+    QuantizationTable(int quality) // 1~100
     {
         TwoDArray<unsigned int> c(8, 8);
         TwoDArray<unsigned int> l(8, 8);
+
+	unsigned int qualityScale;
+	if (quality < 50)
+	    qualityScale = 5000 / qualityScale;
+	else
+	    qualityScale = 200 - quality * 2;
         for (int i = 0; i < 8; i++)
             for (int j = 0; j < 8; j++) {
-                c(i, j) = chrominance_quantization_table[i][j];
-                l(i, j) = luminance_quantization_table[i][j];
+                c(i, j) = (chrominance_quantization_table[i][j] * qualityScale + 50) / 100;
+                l(i, j) = (luminance_quantization_table[i][j] * qualityScale + 50) / 100;
+		if (c(i, j) == 0)
+		    c(i, j) = 1;
+	        if (c(i, j) > 255)
+		    c(i, j) = 255;
+		if (l(i, j) == 0)
+		    l(i, j) = 1;
+	        if (l(i, j) > 255)
+		    l(i, j) = 255;
             }
 
         DQT[0].push_back(std::move(l));

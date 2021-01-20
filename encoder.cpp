@@ -585,7 +585,9 @@ public:
 		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
 //         std::get<3>(DCT_channel_Blocks[0][0]).show();
         Quantize(DCT_channel_Blocks);
+#ifdef DEBUG
         //inv_Quantize(DCT_channel_Blocks);
+#endif
         std::get<3>(DCT_channel_Blocks[0][1]).show();
         puts("=============\n\n\n\n\n\n");
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
