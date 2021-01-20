@@ -573,7 +573,197 @@ public:
         }
         DEBUG_DRAW(debug_img);
 	}
+    
+    int check_AC_nextZeros(std::vector<double>& ac_vector, int start_idx)
+    {
+        int ct = 0;
+        for(int i = start_idx; i < ac_vector.size(); i++)
+        {
+            if(int(ac_vector[i]) != 0){
+                break;
+            }
+            ct++;
+        }
+        return ct;
+    }
+    
+    void DataStream(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+    {
+        std::cout << "Start DataStream" << std::endl;
+        std::vector<bool> bitstream[3];
+        std::ofstream m_ofs("output.txt", std::ios_base::out);
+        for(int channel = 0; channel < 3; channel++)
+            for(int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
+            {
+                // 00 -> 8x8
+                // 01 -> 16x16
+                // 10 -> 32x32
+                // 11 -> 64x64
+                if(std::get<0>(DCT_channel_Blocks[channel][i]) == 8)
+                {
+                    bitstream[channel].push_back(false);
+                    bitstream[channel].push_back(false);
+                }
+                else if(std::get<0>(DCT_channel_Blocks[channel][i]) == 16)
+                {
+                    bitstream[channel].push_back(false);
+                    bitstream[channel].push_back(true);
+                }
+                else if(std::get<0>(DCT_channel_Blocks[channel][i]) == 32)
+                {
+                    bitstream[channel].push_back(true);
+                    bitstream[channel].push_back(false);
+                }
+                else if(std::get<0>(DCT_channel_Blocks[channel][i]) == 64)
+                {
+                    bitstream[channel].push_back(true);
+                    bitstream[channel].push_back(true);
+                }
+                else{
+                   puts("holy assert");
+                    assert(1);
+                }
+            }
+        std::cout << "Start DataStream2" << std::endl;
+        std::vector<bool> dc_stream[3];
+        std::vector<bool> ac_stream[3];
+        for(int channel = 0; channel < 3; channel++)
+        {
+            double previous;
+            // get chrominance/luminance huffman table 
+            std::vector<bool> *huffman_table_dc = (channel==0)?DCLuminanceToCode:DCChrominanceToCode;
+            
+            std::map<unsigned char, std::vector<bool>> huffman_table_ac = 
+                     (channel==0)?ACLuminanceToCode:ACChrominanceToCode;
+            
+            // DPCM (Differential Pulse Coded Modulation)
+            for(int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
+            {
+                std::vector<double> temp = std::get<3>(DCT_channel_Blocks[channel][i]).zigzag();
+                
+                // Deal with DC
+                std::cout << "[Deal with DC] channel: " << channel  <<"i: " << i << std::endl;
+                
+                // First one
+                if(i == 0)
+                {
+                    previous = temp[0];
+                }
+                else // differential part
+                {
+                    previous = temp[0];
+                    int current  = std::abs(int(temp[0] - previous));
+                    int number   = int(temp[0] - previous);
+                    int bit_size = 0;
+                    if (channel == 0)
+                    {
+                        // find number of bits
+                        while(current != 0)
+                        {
+                            bit_size++;
+                            current = current >> 1;
+                        }
+                        // write to dc bitstream
+                        for(int tt = 0; tt < huffman_table_dc[bit_size].size(); tt++)
+                            dc_stream[channel].push_back(huffman_table_dc[bit_size][tt]);
+                        // fixed length encoding
+                        if(number > 0)
+                        {
+                            for(int tt = bit_size-1; tt >=0; tt--)
+                                dc_stream[channel].push_back((bool)(number>>tt)&1);
+                        }
+                        else
+                        {
+                            for(int tt = bit_size-1; tt >=0; tt--)
+                                dc_stream[channel].push_back((bool)((~number)>>tt)&1);
+                        }
+                    }     
+                }
+                
+                // Deal with AC
+                
+                // if all zero
+                int blockSize = std::get<0>(DCT_channel_Blocks[channel][i]);
+                int numberOfZeros;
+                      
+                int cursor = 1;
+                while (cursor < blockSize*blockSize) {
+                    numberOfZeros = check_AC_nextZeros(temp, cursor);
+                    //std::cout << "[Deal with AC] cursor: " << cursor << std::endl;
+                    //std::cout << "[Deal with AC] num 0" << numberOfZeros << std::endl;
+                    if (numberOfZeros == blockSize*blockSize - cursor) {
+                        //std::cout << "[Deal with AC] All zero" << std::endl;
+                        std::vector<bool> ac_ret = huffman_table_ac[0x00];
+                        for (int s = 0; s < ac_ret.size(); s++)
+                            ac_stream[channel].push_back( ac_ret[s] );
+                        cursor += numberOfZeros;
+                    } else if (numberOfZeros >= 16) {
+                        //std::cout << "[Deal with AC] >= 16" << std::endl;
+                        std::vector<bool> ac_ret = huffman_table_ac[0xf0];
+                        for (int s = 0; s < ac_ret.size(); s++)
+                            ac_stream[channel].push_back( ac_ret[s] );
+                        cursor += 16;
+                    } else {
+                        // upper 4 bits representing number of zeros
+                        //std::cout << "[Deal with AC] test1" << std::endl;
+                        cursor += numberOfZeros;
 
+                        int current = std::abs(int(temp[cursor]));
+                        int bit_size = 0;
+                        // find number of bits
+                        while(current != 0)
+                        {
+                            bit_size++;
+                            current = current >> 1;
+                        }
+                        //std::cout << "[Deal with AC] test2" << std::endl;
+                        // write to ac bitstream
+                        unsigned char ac_index = (numberOfZeros << 4) + bit_size;
+                        for(int tt = 0; tt < huffman_table_ac[ac_index].size(); tt++)
+                            ac_stream[channel].push_back(huffman_table_ac[ac_index][tt]);
+                        
+                        // fixed length encoding
+                        int number = int(temp[cursor]);
+                        //std::cout << "[Deal with AC] test3: " << bit_size << std::endl;
+                        if(number > 0)
+                        {
+                            for(int tt = bit_size-1; tt >=0; tt--) {
+                                ac_stream[channel].push_back((bool)(number>>tt)&1);
+                                
+                            }
+                        }
+                        else
+                        {
+                            for(int tt = bit_size-1; tt >=0; tt--) {
+                                ac_stream[channel].push_back((bool)((~number)>>tt)&1);
+                                
+                            }
+                        }
+
+                        cursor += 1;
+                    }
+                    
+                }
+                std::cout << "[Deal with AC] End cursor: " << cursor << std::endl;
+             
+                
+            }
+        }
+        
+        for(int channel = 0; channel < 3; channel++)
+        {
+            for(int i = 0; i < bitstream[channel].size(); i++)
+                m_ofs << bitstream[channel][i]?"1":"0";
+            for(int i = 0; i < dc_stream[channel].size(); i++)
+                m_ofs << dc_stream[channel][i]?"1":"0";
+            for(int i = 0; i < ac_stream[channel].size(); i++)
+                m_ofs << ac_stream[channel][i]?"1":"0";
+            m_ofs << "\n\n=========================================================\n\n";
+        }
+        m_ofs << std::endl;
+         
+    }
+    
 	void run()
 	{
 		Image<double> YCbCr_Image = m_image_reader.m_image.RGB2YCbCr();
@@ -581,8 +771,8 @@ public:
 
 		// tuple (block size, row_idx, col_idx, DCT_Block)
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
-		// DCT(YCbCr_Image, DCT_channel_Blocks);
-		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
+		DCT(YCbCr_Image, DCT_channel_Blocks);
+		//adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
 //         std::get<3>(DCT_channel_Blocks[0][0]).show();
         Quantize(DCT_channel_Blocks);
 #ifdef DEBUG
