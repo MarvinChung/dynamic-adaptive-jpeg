@@ -5,6 +5,7 @@
 #include <sstream>
 #include <cmath>
 #include <assert.h>
+#include "zigzagtable.hpp"
 
 template <class T>
 class TwoDArray
@@ -35,34 +36,30 @@ public:
 	{
 	    return smartPtr2D[i][j];
 	}
-
-// 	inline TwoDArray<T>& operator/=(const TwoDArray<T>& arr)
-//     {
-//     	assert(this->width == arr.width);
-//     	assert(this->height == arr.height);
-
-//         for(int i = 0; i < height; i++)
-//         	for(int j = 0; j < width; j++)
-//         	{
-//         		smartPtr2D[i][j] /= arr[i][j];
-//         	}
-
-//         return *this;
-//     }
-
-// 	TwoDArray<T>& operator*=(const TwoDArray<T>& arr)
-//     {
-//     	assert(this->width == arr.width);
-//     	assert(this->height == arr.height);
-
-//         for(int i = 0; i < height; i++)
-//         	for(int j = 0; j < width; j++)
-//         	{
-//         		smartPtr2D[i][j] *= arr[i][j];
-//         	}
-
-//         return *this;
-//     }
+    
+    std::vector<T> zigzag()
+    {
+        std::vector<T> zz;
+        int *zigzagOrder = NULL;
+        if(width == 8 && height == 8)
+            zigzagOrder = zigzagOrder8x8;
+        else if (width == 16 && height == 16)
+            zigzagOrder = zigzagOrder16x16;
+        else if (width == 32 && height == 32)
+            zigzagOrder = zigzagOrder32x32;
+        else if (width == 64 && height == 64)
+            zigzagOrder = zigzagOrder64x64;
+        
+        assert(zigzagOrder!=NULL);
+        
+        for(int i = 0; i < width*height; i++)
+        {
+            int row_idx = zigzagOrder[i]/width;
+            int col_idx = zigzagOrder[i]%width;
+            zz.push_back(smartPtr2D[row_idx][col_idx]);
+        }
+        return zz;
+    }
 
 	void show()
 	{
