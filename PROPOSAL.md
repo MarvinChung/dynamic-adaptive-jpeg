@@ -1,6 +1,7 @@
 # Project Proposal: Dynamic Adaptive JPEG
 
 > Team C:
+>
 > R09922028 施承志
 >
 > R09922071 劉俊緯
