@@ -795,7 +795,7 @@ public:
         // [0]: Y [1]: Cb [2]:Cr
         // std::get<0>(DCT_channel_Blocks[0][1]) -> block_size
         // std::get<1>(DCT_channel_Blocks[0][1]) -> row_idx
-        // DataStream(DCT_channel_Blocks);
+        DataStream(DCT_channel_Blocks);
 	}
 
 };
