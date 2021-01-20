@@ -586,8 +586,7 @@ public:
 //         std::get<3>(DCT_channel_Blocks[0][0]).show();
         Quantize(DCT_channel_Blocks);
 #ifdef DEBUG
-        //inv_Quantize(DCT_channel_Blocks);
-#endif
+        inv_Quantize(DCT_channel_Blocks);
         std::get<3>(DCT_channel_Blocks[0][1]).show();
         puts("=============\n\n\n\n\n\n");
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -596,6 +595,14 @@ public:
             std::cout << hello[i] << " ";
         }
         std::cout << std::endl;
+#endif
+        // std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3];
+        // tuple (block size, row_idx, col_idx, DCT_Block)
+        // DCT_channel_Blocks: 3 dimension: vector of tuples
+        // [0]: Y [1]: Cb [2]:Cr
+        // std::get<0>(DCT_channel_Blocks[0][1]) -> block_size
+        // std::get<1>(DCT_channel_Blocks[0][1]) -> row_idx
+        DataStream(DCT_channel_Blocks);
 	}
 
 };
