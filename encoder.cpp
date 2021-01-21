@@ -633,6 +633,7 @@ public:
 	{
         // Y:0 Cb:1 Cr:2
         // Table[0]: Y, Table[1]:Cb,Cr
+		std::cout << "start inv quantize" << std::endl;
         int flag = 0;
         for (int i = 0; i < DCT_channel_Blocks[0].size(); i++)
         {
@@ -785,50 +786,57 @@ public:
             std::map<unsigned char, std::vector<bool>> huffman_table_ac = 
                      (channel==0)?ACLuminanceToCode:ACChrominanceToCode;
             
+			int number;
+			unsigned current;
             // DPCM (Differential Pulse Coded Modulation)
             for(int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
             {
                 std::vector<double> temp = std::get<3>(DCT_channel_Blocks[channel][i]).zigzag();
                 
                 // Deal with DC
-                std::cout << "[Deal with DC] channel: " << channel  <<"i: " << i << std::endl;
-                
-                // First one
+                // std::cout << "[Deal with DC] channel: " << channel  <<"i: " << i << std::endl;
+				
+				// First one
                 if(i == 0)
                 {
+                //std::cout << "[Deal with DC] channel: aaaaaa" << std::endl;
+					number   = (int(temp[0]));
+					current  = std::abs(int(temp[0]));
                     previous = temp[0];
                 }
                 else // differential part
                 {
-                    previous = temp[0];
-                    int current  = std::abs(int(temp[0] - previous));
-					std::cout << "channel: " << channel << ", cuurent: " << current << std::endl;
-                    int number   = int(temp[0] - previous);
-                    int bit_size = 0;
-                    if (channel == 0)
-                    {
-                        // find number of bits
-                        while(current != 0)
-                        {
-                            bit_size++;
-                            current = current >> 1;
-                        }
-                        // write to dc bitstream
-                        for(int tt = 0; tt < huffman_table_dc[bit_size].size(); tt++)
-                            dc_stream[channel].push_back(huffman_table_dc[bit_size][tt]);
-                        // fixed length encoding
-                        if(number > 0)
-                        {
-                            for(int tt = bit_size-1; tt >=0; tt--)
-                                dc_stream[channel].push_back((bool)(number>>tt)&1);
-                        }
-                        else
-                        {
-                            for(int tt = bit_size-1; tt >=0; tt--)
-                                dc_stream[channel].push_back((bool)((~number)>>tt)&1);
-                        }
-                    }     
-                }
+                // std::cout << "[Deal with DC] channel: bbbbbbbbb" << std::endl;
+                    number  = (int(temp[i] - previous));
+                    current = std::abs(int(temp[i] - previous));
+                    previous = temp[i];
+					//std::cout << "channel: " << channel << ", cuurent: " << number << std::endl;
+				}
+
+                int bit_size = 0;
+				// find number of bits
+				while(current != 0)
+				{
+                //std::cout << "[Deal with DC] channel: bb " << current << std::endl;
+					bit_size++;
+					current = current >> 1;
+				}
+				// write to dc bitstream
+				for(int tt = 0; tt < huffman_table_dc[bit_size].size(); tt++)
+					dc_stream[channel].push_back(huffman_table_dc[bit_size][tt]);
+				// fixed length encoding
+				if(number > 0)
+				{
+                        //	std::cout << "[Deal with AC] 11 " << std::endl;
+					for(int tt = bit_size-1; tt >=0; tt--)
+						dc_stream[channel].push_back((bool)(number>>tt)&1);
+				}
+				else
+				{
+                        //	std::cout << "[Deal with AC] 10 " << std::endl;
+					for(int tt = bit_size-1; tt >=0; tt--)
+						dc_stream[channel].push_back((bool)((~number)>>tt)&1);
+				}
                 
                 // Deal with AC
                 
@@ -877,15 +885,19 @@ public:
                         //std::cout << "[Deal with AC] test3: " << bit_size << std::endl;
                         if(number > 0)
                         {
+                        	//std::cout << "[Deal with AC] 1 " << std::endl;
                             for(int tt = bit_size-1; tt >=0; tt--) {
                                 ac_stream[channel].push_back((bool)(number>>tt)&1);
+                        	//std::cout << "[Deal with AC] 2 " << std::endl;
                                 
                             }
                         }
                         else
                         {
+                        	//std::cout << "[Deal with AC] 3 " << std::endl;
                             for(int tt = bit_size-1; tt >=0; tt--) {
                                 ac_stream[channel].push_back((bool)((~number)>>tt)&1);
+                        	//std::cout << "[Deal with AC] 4 " << std::endl;
                                 
                             }
                         }
@@ -894,14 +906,16 @@ public:
                     }
                     
                 }
-                std::cout << "[Deal with AC] End cursor: " << cursor << std::endl;
+                //std::cout << "[Deal with AC] End cursor: " << cursor << std::endl;
              
                 
             }
         }
+        //std::cout << "[Deal with AC] out" << std::endl;
         
         for(int channel = 0; channel < 3; channel++)
         {
+        //std::cout << "[Deal with AC] zzz" << std::endl;
             for(int i = 0; i < bitstream[channel].size(); i++)
                 m_ofs << bitstream[channel][i]?"1":"0";
             for(int i = 0; i < dc_stream[channel].size(); i++)
@@ -985,7 +999,7 @@ public:
 		}
 	}
     
-	void run()
+	void run(int mode)
 	{
 		Image<double> YCbCr_Image = m_image_reader.m_image.RGB2YCbCr();
 		puts("finsh RGB2YCbCr");
@@ -994,12 +1008,14 @@ public:
 
 		// tuple (block size, row_idx, col_idx, DCT_Block)
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
-		//DCT(YCbCr_Image, DCT_channel_Blocks);
-		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
+		if (mode)
+			adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
+		else
+			DCT(YCbCr_Image, DCT_channel_Blocks);
         
         Image<double> debug_img(m_image_reader.m_image.width, m_image_reader.m_image.height);
         
-        for ( int channel = 0; channel < 3; channel++)
+        /**for ( int channel = 0; channel < 3; channel++)
         {
             for (int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
             {
@@ -1014,20 +1030,16 @@ public:
                         DCT_Block(h,w) = std::get<3>(DCT_channel_Blocks[channel][i])(h,w); 
                     }
 
-                idct(channel, DCT_Block, debug_img, row_idx, col_idx, block_size);
+                // idct(channel, DCT_Block, debug_img, row_idx, col_idx, block_size);
             }
         }
-        DEBUG_DRAW(debug_img);
+        DEBUG_DRAW(debug_img);**/
 
         
 // 		std::get<3>(DCT_channel_Blocks[0][0]).show();
-//         std::cout << "\n\n\n\n";
 	    Quantize(DCT_channel_Blocks);
-// 		std::get<3>(DCT_channel_Blocks[0][0]).show();
-//         std::cout << "\n\n\n\n";
-//         inv_Quantize(DCT_channel_Blocks);
-// 		std::get<3>(DCT_channel_Blocks[0][0]).show();
-//         std::cout << "\n\n\n\n";
+        DataStream(DCT_channel_Blocks);
+        inv_Quantize(DCT_channel_Blocks);
 
 #ifdef DEBUG
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -1037,23 +1049,16 @@ public:
         }
         std::cout << std::endl;
 #endif
-        // std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3];
-        // tuple (block size, row_idx, col_idx, DCT_Block)
-        // DCT_channel_Blocks: 3 dimension: vector of tuples
-        // [0]: Y [1]: Cb [2]:Cr
-        // std::get<0>(DCT_channel_Blocks[0][1]) -> block_size
-        // std::get<1>(DCT_channel_Blocks[0][1]) -> row_idx
-        DataStream(DCT_channel_Blocks);
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks_2[3];
 		// decode(YCbCr_Image, DCT_channel_Blocks_2);
 	}
 
 };
 
-int main()
+int main(int argc, char **argv)
 {
-	PPM_Image_Reader reader("balls600x200.ppm");
+	PPM_Image_Reader reader(argv[1]);
 	JPGEncoder jpg_encoder(reader);
-	jpg_encoder.run();
+	jpg_encoder.run(atoi(argv[2]));
 
 }
