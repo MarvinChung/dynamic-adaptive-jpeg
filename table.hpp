@@ -34,7 +34,7 @@ public:
                 int b = arr((i-1)/2, j/2);
                 int c = arr(i/2, (j-1)/2);
                 int d = arr((i-1)/2, (j-1)/2);
-                arr2(i, j) = a + b + c + d;
+                arr2(i, j) = 4*(a + b + c + d);
             }
         }
     }

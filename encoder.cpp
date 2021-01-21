@@ -235,20 +235,12 @@ public:
 class JPGEncoder{
 public:
 	PPM_Image_Reader m_image_reader;
-	double cos_lookup[8][8];
     QuantizationTable m_q_table;
 
 	JPGEncoder(PPM_Image_Reader& image_reader) 
 	{
 		m_image_reader = std::move(image_reader);
-		// initialize cos_lookup
-		int i, j;
-		for (i=0; i<8; i++)
-			for (j=0; j<8; j++)
-			{
-				cos_lookup[i][j] = cos( (2*i+1)*j*M_PI/16 );
-				assert( -1<=cos_lookup[i][j] && cos_lookup[i][j]<=1 );
-			}
+
 	}
 
 	/* DCT rows and columns separately
@@ -494,7 +486,6 @@ public:
 
 		puts("start DCT");
 		// Let's first play with fix size 8, therefore block size not yet useful
-		// When modify block size need to change cos_lookup and DCT_Block
 		for(int channel = 0; channel < 3; channel++)
 		{
 			std::cout << "start channel: " << channel << std::endl;
@@ -965,10 +956,13 @@ public:
 		//DCT(YCbCr_Image, DCT_channel_Blocks);
 		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+        std::cout << "\n\n\n\n";
 	    Quantize(DCT_channel_Blocks);
 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+        std::cout << "\n\n\n\n";
         inv_Quantize(DCT_channel_Blocks);
 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+        std::cout << "\n\n\n\n";
 
 #ifdef DEBUG
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -986,7 +980,7 @@ public:
         // std::get<1>(DCT_channel_Blocks[0][1]) -> row_idx
         DataStream(DCT_channel_Blocks);
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks_2[3];
-		//decode(YCbCr_Image, DCT_channel_Blocks_2);
+		// decode(YCbCr_Image, DCT_channel_Blocks_2);
 	}
 
 };
@@ -997,5 +991,4 @@ int main()
 	JPGEncoder jpg_encoder(reader);
 	jpg_encoder.run();
 
-	QuantizationTable t = QuantizationTable();
 }
