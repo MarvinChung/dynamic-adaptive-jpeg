@@ -468,7 +468,28 @@ public:
 						int blk_size = 8 << merge_blk(i,j);
 						TwoDArray<double> DCT_Block(blk_size, blk_size);
 						dct_2d(channel, DCT_Block, img, i*8, j*8, blk_size);
-						DCT_channel_Blocks[channel].push_back(std::make_tuple(blk_size, i*blk_size, j*blk_size, std::move(DCT_Block)));
+                        // Test
+                        TwoDArray<double> DCT_Block2(8, 8);
+                        for(int ii=0; ii<blk_size; ii++){
+                            for(int jj=0; jj<blk_size; jj++){
+                                DCT_Block(ii,jj) = DCT_Block(ii, jj) / (1 << (2 * merge_blk(i,j)));
+                            }
+                        }
+                        /*
+                        TwoDArray<double> DCT_Block3(8, 8);
+                        dct_2d(channel, DCT_Block3, img, i*8, j*8, 8);
+                        for(int ii=0; ii<8; ii++){
+                            for(int jj=0; jj<8; jj++){
+                                printf("%.2lf/%.2lf/%.2lf\t", DCT_Block(ii,jj), DCT_Block2(ii,jj), DCT_Block3(ii,jj));
+                            }
+                        }
+                        */
+						
+						DCT_channel_Blocks[channel].push_back(std::make_tuple(blk_size, i*8, j*8, std::move(DCT_Block)));
+                        
+                        
+                        // Test
+//                         DCT_channel_Blocks[channel].push_back(std::make_tuple(blk_size, i*8, j*8, std::move(DCT_Block)));
 						// DCT_channel_Blocks[channel].push_back(std::make_tuple(8, i, j, std::move(DCT_Block)));
 					
 					}
@@ -524,11 +545,16 @@ public:
                 {
 
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[0][i])(h,w) /= m_q_table.DQT[j][0](h,w); 
+                    for( int h = 0; h < 8 ; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[0][i])(h,w) /= m_q_table.DQT[j][0](h,w); 
                     break;
                 }
+                
+                        
            }
            assert(flag);
         }
@@ -543,8 +569,11 @@ public:
                 if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[j][1].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[j][1].height)
                 {
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[1][i])(h,w) /= m_q_table.DQT[j][1](h,w); 
+                    for( int h = 0; h < 8 ; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[1][i])(h,w) /= m_q_table.DQT[j][1](h,w); 
                     break;
                 }
@@ -563,8 +592,11 @@ public:
                 if( std::get<3>(DCT_channel_Blocks[2][i]).width == m_q_table.DQT[j][1].width && std::get<3>(DCT_channel_Blocks[2][i]).height == m_q_table.DQT[j][1].height)
                 {
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[2][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[2][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[2][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[2][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[2][i])(h,w) /= m_q_table.DQT[j][1](h,w); 
+                    for( int h = 0; h < 8 ; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[2][i])(h,w) /= m_q_table.DQT[j][1](h,w); 
                     break;
                 }
@@ -611,8 +643,11 @@ public:
                 {
 
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[0][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[0][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[0][i])(h,w) *= m_q_table.DQT[j][0](h,w); 
+                    for(int h = 0; h < 8; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[0][i])(h,w) *= m_q_table.DQT[j][0](h,w); 
                     break;
                 }
@@ -629,8 +664,11 @@ public:
                 if( std::get<3>(DCT_channel_Blocks[1][i]).width == m_q_table.DQT[j][1].width && std::get<3>(DCT_channel_Blocks[1][i]).height == m_q_table.DQT[j][1].height)
                 {
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[1][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[1][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[1][i])(h,w) *= m_q_table.DQT[j][1](h,w); 
+                    for(int h = 0; h < 8; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[1][i])(h,w) *= m_q_table.DQT[j][1](h,w); 
                     break;
                 }
@@ -648,8 +686,11 @@ public:
                 if( std::get<3>(DCT_channel_Blocks[2][i]).width == m_q_table.DQT[j][1].width && std::get<3>(DCT_channel_Blocks[2][i]).height == m_q_table.DQT[j][1].height)
                 {
                     flag = 1;
-                    for(int h = 0; h < std::get<3>(DCT_channel_Blocks[2][i]).height; h++)
-                        for(int w = 0; w < std::get<3>(DCT_channel_Blocks[2][i]).width; w++)
+//                     for(int h = 0; h < std::get<3>(DCT_channel_Blocks[2][i]).height; h++)
+//                         for(int w = 0; w < std::get<3>(DCT_channel_Blocks[2][i]).width; w++)
+//                             std::get<3>(DCT_channel_Blocks[2][i])(h,w) *= m_q_table.DQT[j][1](h,w);
+                    for(int h = 0; h < 8; h++)
+                        for(int w = 0; w < 8; w++)
                             std::get<3>(DCT_channel_Blocks[2][i])(h,w) *= m_q_table.DQT[j][1](h,w); 
                     break;
                 }
@@ -955,14 +996,38 @@ public:
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
 		//DCT(YCbCr_Image, DCT_channel_Blocks);
 		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
-		std::get<3>(DCT_channel_Blocks[0][0]).show();
-        std::cout << "\n\n\n\n";
+        
+        Image<double> debug_img(m_image_reader.m_image.width, m_image_reader.m_image.height);
+        
+        for ( int channel = 0; channel < 3; channel++)
+        {
+            for (int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
+            {
+                int block_size = std::get<0>(DCT_channel_Blocks[channel][i]);
+                TwoDArray<double> DCT_Block(block_size, block_size);
+                int row_idx = std::get<1>(DCT_channel_Blocks[channel][i]);
+                int col_idx = std::get<2>(DCT_channel_Blocks[channel][i]);
+
+                // copy block
+                for(int h = 0; h < block_size; h++)
+                    for(int w = 0; w < block_size; w++){                      
+                        DCT_Block(h,w) = std::get<3>(DCT_channel_Blocks[channel][i])(h,w); 
+                    }
+
+                idct(channel, DCT_Block, debug_img, row_idx, col_idx, block_size);
+            }
+        }
+        DEBUG_DRAW(debug_img);
+
+        
+// 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+//         std::cout << "\n\n\n\n";
 	    Quantize(DCT_channel_Blocks);
-		std::get<3>(DCT_channel_Blocks[0][0]).show();
-        std::cout << "\n\n\n\n";
-        inv_Quantize(DCT_channel_Blocks);
-		std::get<3>(DCT_channel_Blocks[0][0]).show();
-        std::cout << "\n\n\n\n";
+// 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+//         std::cout << "\n\n\n\n";
+//         inv_Quantize(DCT_channel_Blocks);
+// 		std::get<3>(DCT_channel_Blocks[0][0]).show();
+//         std::cout << "\n\n\n\n";
 
 #ifdef DEBUG
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -987,7 +1052,7 @@ public:
 
 int main()
 {
-	PPM_Image_Reader reader("balls.ppm");
+	PPM_Image_Reader reader("balls600x200.ppm");
 	JPGEncoder jpg_encoder(reader);
 	jpg_encoder.run();
 
