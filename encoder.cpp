@@ -1,6 +1,63 @@
 #include "table.hpp"
 #define MERGE_THERSHOLD 200
 
+class Scanner
+{
+public:
+	FILE *m_fp;
+    unsigned char m_buffer[2];
+    unsigned char m_bit_buffer;
+    unsigned char m_bit_count;
+    Scanner(FILE *fp): m_fp(fp) {
+        m_bit_count = 0;
+    }
+    unsigned char readByte()
+    {
+        //check_reach_EOF();
+        fread(&m_buffer[0], 1, 1, m_fp);
+
+        return m_buffer[0];
+    }
+
+    unsigned short read2Bytes()
+    {
+        //check_reach_EOF();
+        fread(m_buffer, 1, 2, m_fp);
+        return  m_buffer[0] * 256 + m_buffer[1];
+    }
+
+    unsigned char readBit() {
+        if (m_bit_count == 0) {
+            fread(&m_bit_buffer, 1, 1, m_fp);
+            if (m_bit_buffer == 0xFF) {
+                unsigned char check;
+                fread(&check, 1, 1, m_fp);
+                if (check != 0x00) {
+                    fprintf(stderr, "non 0xFF00!\n");
+                }
+            }
+        }
+        bool ret = m_bit_buffer & (1 << (7 - m_bit_count));
+        m_bit_count = (m_bit_count == 7 ? 0 : m_bit_count + 1);
+        //printf("ret:%d\n",ret);
+        return (unsigned char)ret;
+    }
+
+    void seek(int length)
+    {
+        fseek(m_fp, length, SEEK_CUR);
+    }
+
+    bool check_reach_EOF()
+    {
+        if(feof(m_fp))
+        {
+            puts("reachEOF!");
+        }
+        return feof(m_fp);
+    }
+};
+
 template <class T>
 class Image
 {
@@ -713,6 +770,7 @@ public:
                 {
                     previous = temp[0];
                     int current  = std::abs(int(temp[0] - previous));
+					std::cout << "channel: " << channel << ", cuurent: " << current << std::endl;
                     int number   = int(temp[0] - previous);
                     int bit_size = 0;
                     if (channel == 0)
@@ -823,6 +881,77 @@ public:
         m_ofs << std::endl;
          
     }
+
+	FILE *m_fp;
+	unsigned char m_buffer[2];
+	unsigned char m_bit_buffer;
+	unsigned char m_bit_count;
+	int which_one[4] = {8, 16, 32, 64};
+
+	template<class T>
+	void decode(const Image<T>& img,
+			std::vector< std::tuple<int, int, int, TwoDArray<double> > > tuples[3]) {
+		int height = img.height;
+		int width = img.width;
+		m_fp = fopen("output.txt", "r");
+		Scanner scanner(m_fp);
+
+		TwoDArray<bool> bit_Map(img.width, img.height);
+		for (int channel = 0; channel < 3; channel++) {
+			for (int i = 0; i < img.height; i++)
+				for (int j = 0; j < img.width; j++)
+					bit_Map(i, j) = 0;
+			int filled = 0;
+			
+			// reconstruct map tuples of (size, i, j)
+			int current_cursor = 0;
+			int current_width = current_cursor % width;
+			int current_height = current_cursor / width;
+			std::cout << "decode: 1" << std::endl;
+			while (filled < width*height) {
+				bool bit1 = scanner.readBit();
+				bool bit2 = scanner.readBit();
+				int code = bit1 << 1 + bit2;
+				std::cout << "decode: 2, " << code << std::endl;
+				for (; current_cursor < width*height; current_cursor++) {
+					current_width = current_cursor % width;
+					current_height = current_cursor / width;
+					// std::cout << "decode: 2.5, " << current_width << ", " << current_height << std::endl;
+					if (bit_Map(current_height, current_width)) {
+						current_cursor++;
+					}
+					else {
+						break;
+					}
+				}
+				int currentSize = which_one[code];
+				for (int i = 0; i < currentSize; i++)
+					for (int j = 0; j < currentSize; j++)
+						bit_Map(current_height+i, current_width+j) = 1;
+				TwoDArray<double> tt(currentSize, currentSize);
+				tuples[channel].push_back(std::make_tuple(currentSize, current_height, current_width, std::move(tt)));
+				filled += currentSize*currentSize;
+				std::cout << "decode: 4, " << filled << std::endl;
+			}
+			
+			std::cout << "tuple size: " << tuples[channel].size() << std::endl;
+			// scan DC
+			// get DC value, then read fixed-length encoded value
+			// if first bit is zero --> negative
+			for (int i = 0; i < tuples[channel].size(); i++) {
+				;
+			}
+			std::cout << "tuple size1: " << tuples[channel].size() << std::endl;
+
+			// scan AC
+			// get AC, get blockSize, if 0x00, 0xf0: special case
+			//                      else like DC, 
+			for (int i = 0; i < tuples[channel].size(); i++) {
+				;
+			}
+			std::cout << "tuple size2: " << tuples[channel].size() << std::endl;
+		}
+	}
     
 	void run()
 	{
@@ -835,8 +964,11 @@ public:
 		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[3]; 
 		//DCT(YCbCr_Image, DCT_channel_Blocks);
 		adaptive_merge(YCbCr_Image, DCT_channel_Blocks);
+		std::get<3>(DCT_channel_Blocks[0][0]).show();
 	    Quantize(DCT_channel_Blocks);
+		std::get<3>(DCT_channel_Blocks[0][0]).show();
         inv_Quantize(DCT_channel_Blocks);
+		std::get<3>(DCT_channel_Blocks[0][0]).show();
 
 #ifdef DEBUG
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -852,7 +984,9 @@ public:
         // [0]: Y [1]: Cb [2]:Cr
         // std::get<0>(DCT_channel_Blocks[0][1]) -> block_size
         // std::get<1>(DCT_channel_Blocks[0][1]) -> row_idx
-        // DataStream(DCT_channel_Blocks);
+        DataStream(DCT_channel_Blocks);
+		std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks_2[3];
+		//decode(YCbCr_Image, DCT_channel_Blocks_2);
 	}
 
 };
@@ -862,4 +996,6 @@ int main()
 	PPM_Image_Reader reader("balls.ppm");
 	JPGEncoder jpg_encoder(reader);
 	jpg_encoder.run();
+
+	QuantizationTable t = QuantizationTable();
 }
