@@ -340,8 +340,8 @@ public:
 				if (z < 0) z = 0.0;
 
 				// pixel(tga, x+xpos, y+ypos) = (uint8_t) z;
-				if(row_idx+y<img.height && col_idx+x<img.width){
-					img(row_idx+y, col_idx+x, channel) = z;
+				if(row_idx+x<img.height && col_idx+y<img.width){
+					img(row_idx+x, col_idx+y, channel) = z;
 				}
 			}
 	}
