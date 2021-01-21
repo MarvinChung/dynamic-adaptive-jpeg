@@ -347,10 +347,10 @@ public:
 	}
 
 	template<class T>
-	void DEBUG_DRAW(Image<T>& debug_YCbCr_img)
+	void DEBUG_DRAW(Image<T>& debug_YCbCr_img, const char *input, int mode)
 	{
 		Image<unsigned char> debug_RGB_img = debug_YCbCr_img.YCbCr2RGB();
-		std::ofstream ofs("debug.ppm");
+		std::ofstream ofs(std::string(input)+"_"+std::to_string(mode)+"_debug.ppm");
 		// draw idct image
 		// Draw Image
 	    std::cout << "=====================" << std::endl << "Start drawing debug image ppm" << std::endl;
@@ -629,7 +629,7 @@ public:
 
 	}
 
-	void inv_Quantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+	void inv_Quantize(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[], const char *input, int mode)
 	{
         // Y:0 Cb:1 Cr:2
         // Table[0]: Y, Table[1]:Cb,Cr
@@ -721,7 +721,7 @@ public:
                 idct(channel, DCT_Block, debug_img, row_idx, col_idx, block_size);
             }
         }
-        DEBUG_DRAW(debug_img);
+        DEBUG_DRAW(debug_img, input, mode);
 	}
     
     int check_AC_nextZeros(std::vector<double>& ac_vector, int start_idx)
@@ -737,11 +737,11 @@ public:
         return ct;
     }
     
-    void DataStream(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[], const char *output_file)
+    void DataStream(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[], const char *input, int mode)
     {
         std::cout << "Start DataStream" << std::endl;
         std::vector<bool> bitstream[3];
-        std::ofstream m_ofs(output_file == nullptr ? "output.txt" : output_file, std::ios_base::out);
+        std::ofstream m_ofs(std::string(input)+"_"+std::to_string(mode)+".txt", std::ios_base::out);
         for(int channel = 0; channel < 3; channel++)
             for(int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
             {
@@ -999,7 +999,7 @@ public:
 		}
 	}
     
-	void run(int mode, const char *output_file)
+	void run(const char *input, int mode)
 	{
 		Image<double> YCbCr_Image = m_image_reader.m_image.RGB2YCbCr();
 		puts("finsh RGB2YCbCr");
@@ -1038,8 +1038,8 @@ public:
         
 // 		std::get<3>(DCT_channel_Blocks[0][0]).show();
 	    Quantize(DCT_channel_Blocks);
-        DataStream(DCT_channel_Blocks, output_file);
-        inv_Quantize(DCT_channel_Blocks);
+        DataStream(DCT_channel_Blocks, input, mode);
+        inv_Quantize(DCT_channel_Blocks, input, mode);
 
 #ifdef DEBUG
         std::vector<double> hello = std::get<3>(DCT_channel_Blocks[0][1]).zigzag();
@@ -1059,6 +1059,6 @@ int main(int argc, char **argv)
 {
 	PPM_Image_Reader reader(argv[1]);
 	JPGEncoder jpg_encoder(reader);
-	jpg_encoder.run(atoi(argv[2]), argv[3]);
+	jpg_encoder.run(argv[1], atoi(argv[2]));
 
 }
