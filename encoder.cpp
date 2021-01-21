@@ -737,11 +737,11 @@ public:
         return ct;
     }
     
-    void DataStream(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[])
+    void DataStream(std::vector< std::tuple<int, int, int, TwoDArray<double> > > DCT_channel_Blocks[], const char *output_file)
     {
         std::cout << "Start DataStream" << std::endl;
         std::vector<bool> bitstream[3];
-        std::ofstream m_ofs("output.txt", std::ios_base::out);
+        std::ofstream m_ofs(output_file == nullptr ? "output.txt" : output_file, std::ios_base::out);
         for(int channel = 0; channel < 3; channel++)
             for(int i = 0; i < DCT_channel_Blocks[channel].size(); i++)
             {
@@ -999,7 +999,7 @@ public:
 		}
 	}
     
-	void run(int mode)
+	void run(int mode, const char *output_file)
 	{
 		Image<double> YCbCr_Image = m_image_reader.m_image.RGB2YCbCr();
 		puts("finsh RGB2YCbCr");
@@ -1038,7 +1038,7 @@ public:
         
 // 		std::get<3>(DCT_channel_Blocks[0][0]).show();
 	    Quantize(DCT_channel_Blocks);
-        DataStream(DCT_channel_Blocks);
+        DataStream(DCT_channel_Blocks, output_file);
         inv_Quantize(DCT_channel_Blocks);
 
 #ifdef DEBUG
@@ -1059,6 +1059,6 @@ int main(int argc, char **argv)
 {
 	PPM_Image_Reader reader(argv[1]);
 	JPGEncoder jpg_encoder(reader);
-	jpg_encoder.run(atoi(argv[2]));
+	jpg_encoder.run(atoi(argv[2]), argv[3]);
 
 }
